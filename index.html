@@ -69,8 +69,8 @@
   .banner .uid { margin-top: 8px; font-size: 12px; color: var(--muted); }
   .banner.ok { background: rgba(53,208,127,0.10); border-color: rgba(53,208,127,0.4); }
   .banner.ok .word { color: var(--green); }
-  .banner.duplicate { background: rgba(245,166,35,0.10); border-color: rgba(245,166,35,0.4); }
-  .banner.duplicate .word { color: var(--amber); }
+  .banner.out { background: rgba(245,166,35,0.10); border-color: rgba(245,166,35,0.4); }
+  .banner.out .word { color: var(--amber); }
   .banner.invalid, .banner.error { background: rgba(229,72,77,0.10); border-color: rgba(229,72,77,0.4); }
   .banner.invalid .word, .banner.error .word { color: var(--red); }
 
@@ -257,10 +257,10 @@
 
       callAppsScript('recordScan', { token: scannerToken, code: decodedText })
         .then(function (data) {
-          if (data.status === 'ok') {
-            showBanner('ok', 'ENTRY GRANTED', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>Checked in at ' + fmtTime(data.scannedAt), data.uniqueNumber);
-          } else if (data.status === 'duplicate') {
-            showBanner('duplicate', 'ALREADY SCANNED', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>First scanned at ' + fmtTime(data.scannedAt), data.uniqueNumber);
+          if (data.status === 'ok' && data.direction === 'IN') {
+            showBanner('ok', 'CHECKED IN', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>In at ' + fmtTime(data.scannedAt), data.uniqueNumber);
+          } else if (data.status === 'ok' && data.direction === 'OUT') {
+            showBanner('out', 'CHECKED OUT', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>Out at ' + fmtTime(data.scannedAt), data.uniqueNumber);
           } else if (data.status === 'invalid') {
             showBanner('invalid', 'NOT RECOGNIZED', 'This QR code is not registered.', decodedText);
           } else {
