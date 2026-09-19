@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gate Scanner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0b0d10;
+    --panel: #1b1f27;
+    --panel-2: #21262f;
+    --border: #2a2f3a;
+    --text: #e8eaed;
+    --muted: #8b93a1;
+    --green: #35d07f;
+    --amber: #f5a623;
+    --red: #e5484d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; margin: 0; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  button { font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 8px; border: 1px solid transparent; cursor: pointer; transition: transform 0.08s ease, opacity 0.15s ease; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--green); color: #0b1410; padding: 11px 18px; font-size: 14px; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+  .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); padding: 9px 16px; font-size: 13px; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  input { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 14px; width: 100%; }
+  input:focus { outline: none; border-color: var(--green); }
+  label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; display: block; margin-bottom: 6px; }
+  .gatemark { border: 2px solid var(--border); border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+  .gatemark span { border-radius: 50%; background: var(--green); }
+
+  .wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 22px 16px 40px; }
+
+  #loginSection { min-height: 100vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 20px; }
+  .loginCard { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; }
+  .loginCard .gatemark { width: 34px; height: 34px; margin-bottom: 18px; }
+  .loginCard .gatemark span { width: 10px; height: 10px; }
+  .eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; color: var(--green); text-transform: uppercase; margin-bottom: 6px; }
+  .loginCard h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .field { margin-bottom: 16px; }
+  .error { color: var(--red); font-size: 13px; margin-bottom: 14px; min-height: 16px; }
+
+  #scanSection { display: none; width: 100%; flex-direction: column; align-items: center; }
+  .top { text-align: center; margin-bottom: 18px; }
+  .top h1 { font-size: 18px; }
+
+  .viewport { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--border); }
+  #reader { width: 100%; height: 100%; }
+  #reader video { object-fit: cover; width: 100% !important; height: 100% !important; }
+  .frame { position: absolute; inset: 14%; border: 2px solid rgba(53,208,127,0.55); border-radius: 14px; pointer-events: none; }
+  .scanline { position: absolute; left: 14%; right: 14%; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); animation: sweep 2.2s ease-in-out infinite; pointer-events: none; }
+  @keyframes sweep { 0% { top: 14%; opacity: 0; } 10% { opacity: 1; } 50% { top: 86%; opacity: 1; } 60% { opacity: 0; } 100% { top: 14%; opacity: 0; } }
+
+  .status-hint { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+
+  .banner { width: 100%; max-width: 420px; margin-top: 18px; border-radius: 14px; padding: 22px 20px; text-align: center; border: 1px solid var(--border); background: var(--panel); opacity: 0; transform: translateY(6px); transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
+  .banner.show { opacity: 1; transform: translateY(0); }
+  .banner .word { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .banner .detail { font-size: 14px; color: var(--muted); }
+  .banner .detail .n { color: var(--text); font-weight: 600; }
+  .banner .uid { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .banner.ok { background: rgba(53,208,127,0.10); border-color: rgba(53,208,127,0.4); }
+  .banner.ok .word { color: var(--green); }
+  .banner.duplicate { background: rgba(245,166,35,0.10); border-color: rgba(245,166,35,0.4); }
+  .banner.duplicate .word { color: var(--amber); }
+  .banner.invalid, .banner.error { background: rgba(229,72,77,0.10); border-color: rgba(229,72,77,0.4); }
+  .banner.invalid .word, .banner.error .word { color: var(--red); }
+
+  .restart { margin-top: 16px; padding: 10px 20px; font-size: 13px; }
+  .signout { margin-top: 28px; padding: 8px 16px; font-size: 12px; }
+
+  .configWarning { max-width: 420px; text-align: center; color: var(--amber); font-size: 13px; background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.3); border-radius: 10px; padding: 14px; margin: 20px; }
+</style>
+</head>
+<body>
+
+  <!-- Shown only if APPS_SCRIPT_URL below hasn't been configured yet -->
+  <div class="configWarning" id="configWarning" style="display:none;">
+    This page isn't configured yet. Open this file and set <code>APPS_SCRIPT_URL</code>
+    near the top of the &lt;script&gt; tag to your Apps Script <code>/exec</code> URL.
+  </div>
+
+  <!-- LOGIN -->
+  <div id="loginSection">
+    <div class="loginCard">
+      <div class="gatemark"><span></span></div>
+      <div class="eyebrow">Gate Log · Scanner</div>
+      <h1>Gate sign-in</h1>
+      <p class="sub">Enter the gate password to start scanning visitor QR codes.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required autofocus />
+        </div>
+        <div class="error" id="loginError"></div>
+        <button type="submit" class="btn-primary" id="loginBtn" style="width:100%;">Start scanning</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="wrap">
+    <div id="scanSection">
+      <div class="top">
+        <div class="eyebrow">Gate Log · Scanner</div>
+        <h1>Scan QR to check in</h1>
+      </div>
+
+      <div class="viewport">
+        <div id="reader"></div>
+        <div class="frame"></div>
+        <div class="scanline" id="scanline"></div>
+      </div>
+
+      <div class="status-hint" id="hint">Point the camera at the visitor's QR code.</div>
+
+      <div class="banner" id="banner">
+        <div class="word" id="bannerWord"></div>
+        <div class="detail" id="bannerDetail"></div>
+        <div class="uid mono" id="bannerUid"></div>
+      </div>
+
+      <button class="btn-ghost restart" id="restartBtn" style="display:none;">Scan next person</button>
+      <button class="btn-ghost" id="retryCameraBtn" style="display:none; margin-top: 12px; padding: 9px 18px; font-size: 13px;">Retry camera access</button>
+      <button class="btn-ghost signout" id="signoutBtn">Sign out of gate session</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    // ======================================================================
+    // REQUIRED: paste your Apps Script Web App /exec URL here after deploying
+    // ======================================================================
+    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWQZqNl1Pc_oFNhpb82_6zZMcl0E4Vjk9G4zNUWXPx8rbYOj3xHstmmqCBBB8KM6X7MA/exec';
+
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      document.getElementById('configWarning').style.display = 'block';
+    }
+
+    // Calls the Apps Script doPost() JSON API. Sent as text/plain on purpose
+    // so the browser treats it as a CORS "simple request" (no preflight),
+    // since Apps Script doesn't handle OPTIONS preflight requests.
+    function callAppsScript(action, payload) {
+      var body = Object.assign({ action: action }, payload);
+      return fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) throw new Error(data.error);
+          return data;
+        });
+    }
+
+    var scannerToken = sessionStorage.getItem('scannerToken');
+    var html5QrCode;
+    var isProcessing = false;
+    var config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+    var hint = document.getElementById('hint');
+    var banner = document.getElementById('banner');
+    var bannerWord = document.getElementById('bannerWord');
+    var bannerDetail = document.getElementById('bannerDetail');
+    var bannerUid = document.getElementById('bannerUid');
+    var restartBtn = document.getElementById('restartBtn');
+    var retryCameraBtn = document.getElementById('retryCameraBtn');
+    var scanline = document.getElementById('scanline');
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString() : ''; }
+
+    function showScanSection() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('scanSection').style.display = 'flex';
+      startScanning();
+    }
+    function showLogin(message) {
+      sessionStorage.removeItem('scannerToken');
+      scannerToken = null;
+      document.getElementById('scanSection').style.display = 'none';
+      document.getElementById('loginSection').style.display = 'flex';
+      if (message) document.getElementById('loginError').textContent = message;
+      if (html5QrCode) { try { html5QrCode.stop(); } catch (e) {} }
+    }
+
+    // ---- Login ----
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = document.getElementById('loginBtn');
+      var err = document.getElementById('loginError');
+      err.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+
+      callAppsScript('loginScanner', { password: document.getElementById('password').value })
+        .then(function (data) {
+          sessionStorage.setItem('scannerToken', data.token);
+          scannerToken = data.token;
+          btn.disabled = false;
+          btn.textContent = 'Start scanning';
+          showScanSection();
+        })
+        .catch(function (error) {
+          err.textContent = error.message || 'Login failed';
+          btn.disabled = false;
+          btn.textContent = 'Start scanning';
+        });
+    });
+
+    document.getElementById('signoutBtn').addEventListener('click', function () {
+      showLogin();
+    });
+
+    // ---- Scanning ----
+    function showBanner(status, wordText, detailHtml, uid) {
+      banner.className = 'banner show ' + status;
+      bannerWord.textContent = wordText;
+      bannerDetail.innerHTML = detailHtml;
+      bannerUid.textContent = uid ? 'Code: ' + uid : '';
+      scanline.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      hint.style.display = 'none';
+      retryCameraBtn.style.display = 'none';
+    }
+
+    function resetForNextScan() {
+      banner.className = 'banner';
+      bannerWord.textContent = '';
+      bannerDetail.textContent = '';
+      bannerUid.textContent = '';
+      restartBtn.style.display = 'none';
+      scanline.style.display = 'block';
+      hint.style.display = 'block';
+      isProcessing = false;
+    }
+
+    function onScanSuccess(decodedText) {
+      if (isProcessing) return;
+      isProcessing = true;
+      hint.textContent = 'Checking…';
+
+      try { html5QrCode.pause(true); } catch (e) {}
+
+      callAppsScript('recordScan', { token: scannerToken, code: decodedText })
+        .then(function (data) {
+          if (data.status === 'ok') {
+            showBanner('ok', 'ENTRY GRANTED', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>Checked in at ' + fmtTime(data.scannedAt), data.uniqueNumber);
+          } else if (data.status === 'duplicate') {
+            showBanner('duplicate', 'ALREADY SCANNED', '<span class="n">' + escapeHtml(data.name) + '</span> · ' + escapeHtml(data.vendorName) + '<br/>First scanned at ' + fmtTime(data.scannedAt), data.uniqueNumber);
+          } else if (data.status === 'invalid') {
+            showBanner('invalid', 'NOT RECOGNIZED', 'This QR code is not registered.', decodedText);
+          } else {
+            showBanner('error', 'SCAN FAILED', data.message || 'Something went wrong. Try again.', '');
+          }
+        })
+        .catch(function (error) {
+          if (error.message && error.message.indexOf('expired') !== -1) {
+            showLogin(error.message);
+          } else {
+            showBanner('error', 'SCAN FAILED', error.message || 'Something went wrong.', '');
+          }
+        });
+    }
+
+    function describeCameraError(err) {
+      var msg = (err && (err.message || err.name || String(err))) || '';
+      if (/NotAllowedError|Permission denied|denied/i.test(msg)) {
+        return 'Camera permission was denied for this page. Tap the padlock icon in your address bar, allow Camera, then tap Retry.';
+      }
+      if (/NotFoundError|no camera|DevicesNotFound/i.test(msg)) {
+        return 'No camera was found on this device.';
+      }
+      if (/NotReadableError|TrackStartError|in use/i.test(msg)) {
+        return 'The camera is busy or blocked by another app. Close other camera apps and tap Retry.';
+      }
+      return 'Camera unavailable (' + (msg || 'unknown error') + ').';
+    }
+
+    function startScanning() {
+      if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
+      hint.textContent = 'Requesting camera access…';
+      retryCameraBtn.style.display = 'none';
+      html5QrCode.start({ facingMode: 'environment' }, config, onScanSuccess)
+        .then(function () {
+          hint.textContent = "Point the camera at the visitor's QR code.";
+        })
+        .catch(function (err) {
+          hint.textContent = describeCameraError(err);
+          retryCameraBtn.style.display = 'inline-block';
+          console.error(err);
+        });
+    }
+
+    retryCameraBtn.addEventListener('click', function () { startScanning(); });
+
+    restartBtn.addEventListener('click', function () {
+      try { html5QrCode.resume(); } catch (e) {}
+      resetForNextScan();
+    });
+
+    // ---- Boot: try existing session first ----
+    if (scannerToken) {
+      showScanSection();
+    }
+  </script>
+</body>
+</html>
